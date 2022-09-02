@@ -1,30 +1,97 @@
 <template>
-  <nav>
-    <router-link to="/">Home</router-link> |
-    <router-link to="/about">About</router-link>
-  </nav>
-  <router-view/>
+  <div class="app">
+    <h1>Страница с постами</h1>
+    <MyInput v-model="searchQuery" placeholder="Поиск по названию"/>
+    <div class="app__buttons">
+      <MyButton @click="showDialog">Создать пост</MyButton>
+      <MySelect v-model="selectedSort" :options="sortOptions"/>
+    </div>
+    <MyDialog  v-model:show="dialogVisible">
+      <PostForm @create='createPost'/>
+    </MyDialog>
+    <PostList :posts = "sortedAndSearchedPosts" @remove="removePost" v-if="!Loading"/>
+    <div v-else> Data is Loading...</div>
+  </div>
 </template>
 
+<script>
+import PostForm from "@/components/PostForm";
+import PostList from "@/components/PostList";
+import axios from "axios";
+export default {
+  components: { PostList, PostForm},
+  data() {
+   return {
+     posts: [],
+     dialogVisible: false,
+     modificatorValue: '',
+     Loading: false,
+     selectedSort: '',
+     searchQuery: '',
+     sortOptions: [{value: 'title', name: 'По названию'},
+       {value: 'body', name: 'По описанию'}]
+   }
+  },
+  methods: {
+    createPost(post) {
+      this.posts.push(post)
+      this.dialogVisible = false;
+    },
+    removePost(post) {
+      this.posts = this.posts.filter((item) => item.id !== post.id)
+    },
+    showDialog() {
+      this.dialogVisible = true;
+    },
+    async fetchPosts() {
+      this.Loading = true
+      try {
+        const response = await axios.get('https://jsonplaceholder.typicode.com/posts?_limit=10')
+        this.posts = response.data
+      } catch (e) {
+        alert(e.message)
+      } finally {
+        this.Loading = false;
+      }
+    }
+  },
+  mounted() {
+    this.fetchPosts()
+  },
+  // watch: {
+  //   selectedSort(newValue) {
+  //     this.posts.sort((post1,post2) => {
+  //       return post1[newValue]?.localeCompare((post2[newValue]))
+  //     })
+  //   }
+  // },
+  computed: {
+    sortedPosts() {
+      return [...this.posts].sort((post1,post2) => {
+        return post1[this.selectedSort]?.localeCompare((post2[this.selectedSort]))
+      })
+    },
+    sortedAndSearchedPosts() {
+      return this.sortedPosts.filter(post => post.title.toLowerCase().includes(this.searchQuery.toLowerCase()))
+    }
+  }
+}
+</script>
+
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-nav {
-  padding: 30px;
+.app {
+  padding: 20px;
 }
 
-nav a {
-  font-weight: bold;
-  color: #2c3e50;
-}
-
-nav a.router-link-exact-active {
-  color: #42b983;
+.app__buttons {
+  display: flex;
+  margin: 15px;
+  justify-content: space-between;
 }
 </style>
